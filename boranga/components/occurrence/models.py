@@ -6152,14 +6152,18 @@ class OccurrenceReportBulkImportTask(ArchivableModel):
 
     @property
     def file_size_bytes(self):
-        if self._file:
-            return self._file.size
+        try:
+            # Check if the field has a file assigned and if it actually exists on disk/storage
+            if self._file and self._file.storage.exists(self._file.name):
+                return self._file.size
+        except (FileNotFoundError, OSError, ValueError):
+            pass
         return None
 
     @property
     def file_size_megabytes(self):
         if self.file_size_bytes:
-            return round(self.file_size_bytes / 1024 / 1024, 2)
+            return round(self.file_size_bytes / (1024 * 1024), 2)
         return None
 
     @classmethod
