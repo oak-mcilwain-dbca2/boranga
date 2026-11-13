@@ -802,11 +802,17 @@ class OccurrenceReportViewSet(
         qs = self.get_queryset()
         datum_list = []
 
-        id = request.GET.get("id", None)
+        occurrence_report_id = request.GET.get("id", None)
+
+        # Guard clause: return early if no id is provided
+        if not occurrence_report_id:
+            res_json = json.dumps({"crs": []})
+            return HttpResponse(res_json, content_type="application/json")
+
         try:
-            qs = qs.get(id=id)
+            qs = qs.get(id=occurrence_report_id)
         except OccurrenceReport.DoesNotExist:
-            logger.error(f"Occurrence Report with id {id} not found")
+            logger.error(f"Occurrence Report with id {occurrence_report_id} not found")
         else:
             ocr_geometries = qs.ocr_geometry.all().exclude(**{"geometry": None})
             epsg_codes = [str(g.srid) for g in ocr_geometries.values_list("geometry", flat=True).distinct()]
@@ -4185,11 +4191,17 @@ class OccurrenceViewSet(
         qs = self.get_queryset()
         datum_list = []
 
-        id = request.GET.get("id", None)
+        occurrence_id = request.GET.get("id", None)
+
+        # Guard clause: return early if no id is provided
+        if not occurrence_id:
+            res_json = json.dumps({"crs": []})
+            return HttpResponse(res_json, content_type="application/json")
+
         try:
-            qs = qs.get(id=id)
+            qs = qs.get(id=occurrence_id)
         except Occurrence.DoesNotExist:
-            logger.error(f"Occurrence with id {id} not found")
+            logger.error(f"Occurrence with id {occurrence_id} not found")
         else:
             pass
             occ_geometries = qs.occ_geometry.all().exclude(**{"geometry": None})
