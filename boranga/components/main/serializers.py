@@ -274,6 +274,8 @@ class ContentTypeSerializer(BaseModelSerializer):
     def get_model_abbreviation(self, obj):
         if not obj.model_class():
             return None
+        if not hasattr(obj.model_class(), "BULK_IMPORT_ABBREVIATION"):
+            return None
         return obj.model_class().BULK_IMPORT_ABBREVIATION
 
     def get_model_fields(self, obj):
