@@ -158,36 +158,39 @@ class MeetingPaginatedViewSet(viewsets.ReadOnlyModelViewSet):
         ]
         df = df[column_order]
 
-        if export_format is not None:
-            if export_format == "excel":
-                buffer = BytesIO()
-                workbook = Workbook()
-                sheet_name = "Sheet1"
-                sheet = workbook.active
-                sheet.title = sheet_name
+        # Default to csv or excel if not provided, or handle it explicitly
+        if export_format is None:
+            export_format = "csv" # or handle as a bad request / default export
 
-                for row in dataframe_to_rows(df, index=False, header=True):
-                    sheet.append(row)
-                for cell in sheet[1]:
-                    cell.font = Font(bold=True)
+        if export_format == "excel":
+            buffer = BytesIO()
+            workbook = Workbook()
+            sheet_name = "Sheet1"
+            sheet = workbook.active
+            sheet.title = sheet_name
 
-                workbook.save(buffer)
-                buffer.seek(0)
-                response = HttpResponse(buffer.read(), content_type="application/vnd.ms-excel")
-                response["Content-Disposition"] = "attachment; filename=DBCA_Meeting.xlsx"
-                final_response = response
-                buffer.close()
-                return final_response
+            for row in dataframe_to_rows(df, index=False, header=True):
+                sheet.append(row)
+            for cell in sheet[1]:
+                cell.font = Font(bold=True)
 
-            elif export_format == "csv":
-                csv_data = df.to_csv(index=False)
-                response = HttpResponse(content_type="text/csv")
-                response["Content-Disposition"] = "attachment; filename=DBCA_Meeting.csv"
-                response.write(csv_data)
-                return response
+            workbook.save(buffer)
+            buffer.seek(0)
+            response = HttpResponse(buffer.read(), content_type="application/vnd.ms-excel")
+            response["Content-Disposition"] = "attachment; filename=DBCA_Meeting.xlsx"
+            final_response = response
+            buffer.close()
+            return final_response
 
-            else:
-                return Response(status=400, data="Format not valid")
+        elif export_format == "csv":
+            csv_data = df.to_csv(index=False)
+            response = HttpResponse(content_type="text/csv")
+            response["Content-Disposition"] = "attachment; filename=DBCA_Meeting.csv"
+            response.write(csv_data)
+            return response
+
+        else:
+            return Response(status=400, data="Format not valid")
 
 
 class MeetingViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
