@@ -5354,14 +5354,16 @@ class OccurrenceTenurePaginatedViewSet(viewsets.ReadOnlyModelViewSet):
         if occurrence_id:
             queryset = self.current_and_historical_tenures(queryset, occurrence_id)
 
-        results = []
+        # 1. Always annotate the label so it's ready if a search term exists
+        queryset = queryset.annotate(vesting_code_label=Concat("vesting__code", Value(" - "), "vesting__label"))
+
+        # 2. Apply search filter only if a search term is provided
         if search_term:
-            queryset = (
-                queryset.annotate(vesting_code_label=Concat("vesting__code", Value(" - "), "vesting__label"))
-                .filter(vesting_code_label__icontains=search_term)
-                .values("vesting__id", "vesting__code", "vesting__label")
-                .distinct()[:10]
-            )
+            queryset = queryset.filter(vesting_code_label__icontains=search_term)
+
+        # 3. Always apply .values() and .distinct() so 'row' is always a dictionary
+        queryset = queryset.values("vesting__id", "vesting__code", "vesting__label").distinct()[:10]
+
         results = [
             {
                 "id": row["vesting__id"],
@@ -5387,13 +5389,16 @@ class OccurrenceTenurePaginatedViewSet(viewsets.ReadOnlyModelViewSet):
         if occurrence_id:
             queryset = self.current_and_historical_tenures(queryset, occurrence_id)
 
+        # 1. Always annotate the combined label so we can filter or use it consistently
+        queryset = queryset.annotate(purpose_code_label=Concat("purpose__code", Value(" - "), "purpose__label"))
+
+        # 2. Apply search filter if present
         if search_term:
-            queryset = (
-                queryset.annotate(purpose_code_label=Concat("purpose__code", Value(" - "), "purpose__label"))
-                .filter(purpose_code_label__icontains=search_term)
-                .values("purpose__id", "purpose__code", "purpose__label")
-                .distinct()[:10]
-            )
+            queryset = queryset.filter(purpose_code_label__icontains=search_term)
+
+        # 3. Project down to distinct values/fields consistently for both paths
+        queryset = queryset.values("purpose__id", "purpose__code", "purpose__label").distinct()[:10]
+
         results = [
             {
                 "id": row["purpose__id"],
