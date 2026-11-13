@@ -300,6 +300,7 @@ class GetScientificName(views.APIView):
 
 class GetScientificNameByGroup(views.APIView):
     def get(self, request, format=None):
+        queryset = []
         search_term = request.GET.get("term", "")
         if search_term:
             group_type_id = request.GET.get("group_type_id", "")
