@@ -342,7 +342,7 @@
                                         "type": "file",
                                         "name": "monitoring_plan",
                                         "label": "Please attach monitoring plan.",
-                                        "isRepeatable":true
+                                        "isRepeatable": true
                                     },
                                     {
                                         "type": "declaration",

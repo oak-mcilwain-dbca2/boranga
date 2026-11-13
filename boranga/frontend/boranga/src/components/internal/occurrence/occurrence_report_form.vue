@@ -9,8 +9,11 @@
                 <h3 class="float-start">
                     Occurrence Report Form:
                     {{ occurrence_report.occurrence_report_number }} -
-                    <span class="text-capitalize">{{ display_group_type }}</span
-                    ><template v-if="occurrence_report.cs_category_code">
+                    <span class="text-capitalize">{{
+                        display_group_type
+                    }}</span><template
+                        v-if="occurrence_report.cs_category_code"
+                    >
                         {{ ' ' + occurrence_report.cs_category_code }}</template
                     >
                 </h3>

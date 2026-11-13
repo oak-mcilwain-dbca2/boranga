@@ -1,8 +1,8 @@
 {
-  "compilerOptions": {
-    "allowJs": true,
-    "checkJs": false,
-    "noEmit": true
-  },
-  "include": ["src/**/*"]
+    "compilerOptions": {
+        "allowJs": true,
+        "checkJs": false,
+        "noEmit": true
+    },
+    "include": ["src/**/*"]
 }

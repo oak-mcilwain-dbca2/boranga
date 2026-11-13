@@ -52,8 +52,7 @@
                                             Combine
                                             <span class="fw-semibold">{{
                                                 index + 1
-                                            }}</span
-                                            ><span
+                                            }}</span><span
                                                 v-if="index > 0"
                                                 class="ms-2"
                                                 @click.prevent="

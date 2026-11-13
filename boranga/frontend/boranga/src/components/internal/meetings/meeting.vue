@@ -49,8 +49,9 @@
                                                     action.handler()
                                                 "
                                             >
-                                                {{ action.label }}</button
-                                            ><br />
+                                                {{
+                                                    action.label
+                                                }}</button><br />
                                         </div>
                                     </div>
                                 </div>

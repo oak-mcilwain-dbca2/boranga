@@ -622,8 +622,7 @@
                                                         'delist'
                                                         ? 'Delist'
                                                         : 'Approve'
-                                                }}</button
-                                            ><br />
+                                                }}</button><br />
                                         </div>
                                     </div>
                                 </template>
@@ -661,8 +660,7 @@
                                                         'delist'
                                                         ? 'Delist'
                                                         : 'Approve'
-                                                }}</button
-                                            ><br />
+                                                }}</button><br />
                                         </div>
                                     </div>
                                     <div class="row mb-2">

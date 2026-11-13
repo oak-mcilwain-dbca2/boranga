@@ -30,8 +30,9 @@
                         </span>
                         <span class="badge bg-secondary me-2">{{
                             species.processing_status
-                        }}</span
-                        ><span v-if="index === 0" class="badge bg-primary"
+                        }}</span><span
+                            v-if="index === 0"
+                            class="badge bg-primary"
                             >Original</span
                         >
                     </li>
