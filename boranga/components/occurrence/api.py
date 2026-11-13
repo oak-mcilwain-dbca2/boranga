@@ -4945,11 +4945,17 @@ class OccurrenceViewSet(
         qs = self.get_queryset()
         crs = []
 
-        id = request.GET.get("id", None)
+        occurrence_id = request.GET.get("id", None)
+
+        # Guard clause: return early if no id is provided
+        if not occurrence_id:
+            res_json = json.dumps({"crs": []})
+            return HttpResponse(res_json, content_type="application/json")
+
         try:
-            qs = qs.get(id=id)
+            qs = qs.get(id=occurrence_id)
         except Occurrence.DoesNotExist:
-            logger.error(f"Occurrence with id {id} not found")
+            logger.error(f"Occurrence with id {occurrence_id} not found")
         else:
             # Occurrence Geometries
             occ_geometries = qs.occ_geometry.all().exclude(**{"geometry": None})
