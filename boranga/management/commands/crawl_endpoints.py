@@ -23,6 +23,12 @@ IGNORE_PREFIXES = [
     "/redoc",
 ]
 
+IGNORE_PATTERNS = [
+    r"/\d+/history/$",
+    r"/\d+/delete/$",
+    r"/\d+/change/$",
+]
+
 EXPECTED_FAILURES = [
     "/sentry-debug/",
 ]
@@ -122,6 +128,11 @@ class Command(BaseCommand):
             if any(path.startswith(prefix) for prefix in IGNORE_PREFIXES):
                 self.stdout.write(self.style.WARNING(f"SKIP : {path}"))
                 results.append([path, "N/A", "SKIPPED", "In IGNORE_PREFIXES"])
+                continue
+
+            if any(re.search(pattern, path) for pattern in IGNORE_PATTERNS):
+                self.stdout.write(self.style.WARNING(f"SKIP : {path}"))
+                results.append([path, "N/A", "SKIPPED", "Matched ignore pattern"])
                 continue
 
             is_expected_fail = any(path.startswith(prefix) for prefix in EXPECTED_FAILURES)
