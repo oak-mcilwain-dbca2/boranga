@@ -27,6 +27,7 @@ IGNORE_PATTERNS = [
     r"/\d+/history/$",
     r"/\d+/delete/$",
     r"/\d+/change/$",
+    r"/admin/.+/\d+/$",  # <-- Add this line to catch /admin/<app>/<model>/<id>/
 ]
 
 EXPECTED_FAILURES = [
@@ -102,21 +103,29 @@ class Command(BaseCommand):
             if "format>" in route or "<format>" in route:
                 continue
 
+            # Clean raw regex chars
             cleaned = route.replace("^", "").replace("$", "").replace("\\", "")
             cleaned = re.sub(r"/\?", "/", cleaned)
             cleaned = re.sub(r"\[[^\]]+\]\+?", "", cleaned)
+
+            # --- ROBUST PARAMETER REPLACEMENT ---
+            # 1. Catch Django named groups like (?P<pk>[0-9]+) or (?P<id>\w+) and replace with '1'
+            cleaned = re.sub(r"\(\?P<.*?>.*?\)", "1", cleaned)
+            # 2. Catch standard Django path converters like <int:pk> or <slug:slug> or <id> and replace with '1'
+            cleaned = re.sub(r"<.*?>", "1", cleaned)
+            # 3. Catch any remaining unnamed groups like ([0-9]+) and replace with '1'
+            cleaned = re.sub(r"\([^)]*?\)", "1", cleaned)
+            # ------------------------------------
+
             cleaned = "/" + re.sub(r"/+", "/", cleaned).lstrip("/")
 
-            is_parameterized = any(token in cleaned for token in ["<", "(?P", "("])
+            # Final sanity check: if any stray malformed groups survived, skip or clean them
+            if "(?P" in cleaned or "<" in cleaned:
+                # Fallback sweep to completely remove broken artifact text
+                cleaned = re.sub(r"\(.*?\)", "1", cleaned)
+                cleaned = "/" + re.sub(r"/+", "/", cleaned).lstrip("/")
 
-            if not is_parameterized:
-                cleaned_patterns.add(cleaned)
-            else:
-                # Fix: Replace (?P<name>regex) FIRST, then <name> tags
-                sample_route = re.sub(r"\(\?P<[^>]+>[^)]+\)", "1", cleaned)
-                sample_route = re.sub(r"<[^>]+>", "1", sample_route)
-                sample_route = re.sub(r"/+", "/", sample_route)
-                cleaned_patterns.add(sample_route)
+            cleaned_patterns.add(cleaned)
 
         patterns = sorted(list(cleaned_patterns))
         self.stdout.write(f"Crawling {len(patterns)} endpoints...\n")
