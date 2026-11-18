@@ -131,7 +131,7 @@ SELECT
     TO_CHAR(geom.updated_date, 'YYYY-MM-DD HH24:MI:SS') AS GEO_MODIFY,
     
     -- Legislative tracking
-    active_cs.wa_legislative_list_code AS WA_LEGS_CS,
+    active_cs.wa_legislative_list_code AS WA_LEG_CS,
     approved_cs.wa_cons_code AS WACONSCODE,
     active_cs.commonwealth_conservation_code AS COMWLTH_CS,
     
