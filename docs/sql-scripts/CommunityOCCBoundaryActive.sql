@@ -206,11 +206,11 @@ associated_species AS (
         STRING_AGG(t.scientific_name, ', ' ORDER BY t.scientific_name) AS scientific_names,
         assoc.comment
     FROM boranga_occassociatedspecies assoc
-    INNER JOIN boranga_occassociatedspecies_related_species m2m 
+    LEFT JOIN boranga_occassociatedspecies_related_species m2m 
         ON assoc.id = m2m.occassociatedspecies_id
-    INNER JOIN boranga_associatedspeciestaxonomy ast 
+    LEFT JOIN boranga_associatedspeciestaxonomy ast 
         ON m2m.associatedspeciestaxonomy_id = ast.id
-    INNER JOIN boranga_taxonomy t 
+    LEFT JOIN boranga_taxonomy t 
         ON ast.taxonomy_id = t.id
     GROUP BY assoc.occurrence_id, assoc.comment
 ),
