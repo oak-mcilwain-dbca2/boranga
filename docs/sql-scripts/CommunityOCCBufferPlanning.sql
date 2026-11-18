@@ -92,8 +92,8 @@ buf AS (
         og.buffer_radius,
         og.updated_date,
         -- Sourced using template coordinate calculations
-        ROUND((ST_Area(ST_Transform(bg.geometry, 4326)::geography) / 1000000.0)::numeric, 6) AS area_sq_km,
-        ROUND((ST_Area(ST_Transform(bg.geometry, 4326)::geography) / 10000.0)::numeric, 4) AS area_ha
+        ROUND((ST_Area(ST_Transform(bg.geometry, 7844)::geography) / 1000000.0)::numeric, 6) AS area_sq_km,
+        ROUND((ST_Area(ST_Transform(bg.geometry, 7844)::geography) / 10000.0)::numeric, 4) AS area_ha
     FROM boranga_buffergeometry bg
     INNER JOIN boranga_occurrencegeometry og ON bg.buffered_from_geometry_id = og.id
 )

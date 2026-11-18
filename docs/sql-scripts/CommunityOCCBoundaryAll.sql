@@ -302,7 +302,7 @@ geom AS (
             (ST_Area(ST_Transform(g.geometry, 7844)::geography) / 1000000.0)::numeric, 6
         ) AS area_sq_km,
         ROUND(
-            ST_Area(ST_Transform(g.geometry, 4326)::geography)::numeric
+            ST_Area(ST_Transform(g.geometry, 7844)::geography)::numeric
         ) AS area_sq_m,         
         ROUND(
             (ST_Area(ST_Transform(g.geometry, 7844)::geography) / 10000.0)::numeric, 4
