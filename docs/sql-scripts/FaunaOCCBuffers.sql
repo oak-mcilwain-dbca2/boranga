@@ -283,6 +283,7 @@ buf AS (
         ) AS area_sq_m        
     FROM boranga_buffergeometry bg
     INNER JOIN boranga_occurrencegeometry og ON bg.buffered_from_geometry_id = og.id
+    WHERE og.visible = TRUE
 )
 
 -- ===========================================================================

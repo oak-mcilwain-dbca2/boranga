@@ -96,6 +96,7 @@ buf AS (
         ROUND((ST_Area(ST_Transform(bg.geometry, 7844)::geography) / 10000.0)::numeric, 4) AS area_ha
     FROM boranga_buffergeometry bg
     INNER JOIN boranga_occurrencegeometry og ON bg.buffered_from_geometry_id = og.id
+    WHERE og.visible = TRUE
 )
 
 -- =============================================================================
