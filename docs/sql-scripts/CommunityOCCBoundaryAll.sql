@@ -141,7 +141,7 @@ identification AS (
         i.barcode_number,
         sd.name AS sample_destination
     FROM boranga_occidentification i
-    INNER JOIN boranga_sampledestination sd ON i.sample_destination_id = sd.id
+    LEFT JOIN boranga_sampledestination sd ON i.sample_destination_id = sd.id
     LEFT JOIN boranga_identificationcertainty ic ON i.identification_certainty_id = ic.id
 ),
 
@@ -200,9 +200,9 @@ habitat AS (
     FROM boranga_occhabitatcondition hc
     -- Structural Chain Links (SAFELY CHANGED TO INNER JOIN)
     -- These bridge tables must exist for the record to be valid in the system
-    INNER JOIN boranga_ocrhabitatcondition ocr_hc ON hc.copied_ocr_habitat_condition_id = ocr_hc.id
-    INNER JOIN boranga_occurrencereport ocr ON ocr_hc.occurrence_report_id = ocr.id
-    INNER JOIN boranga_submitterinformation si ON ocr.submitter_information_id = si.id
+    LEFT JOIN boranga_ocrhabitatcondition ocr_hc ON hc.copied_ocr_habitat_condition_id = ocr_hc.id
+    LEFT JOIN boranga_occurrencereport ocr ON ocr_hc.occurrence_report_id = ocr.id
+    LEFT JOIN boranga_submitterinformation si ON ocr.submitter_information_id = si.id
 
     -- Observer Subquery (KEPT AS LEFT JOIN)
     -- Essential so that reports with zero logged observers don't get deleted
@@ -237,11 +237,11 @@ associated_species AS (
         STRING_AGG(t.scientific_name, ', ' ORDER BY t.scientific_name) AS scientific_names,
         comment
     FROM boranga_occassociatedspecies assoc
-    INNER JOIN boranga_occassociatedspecies_related_species m2m 
+    LEFT JOIN boranga_occassociatedspecies_related_species m2m 
         ON assoc.id = m2m.occassociatedspecies_id
-    INNER JOIN boranga_associatedspeciestaxonomy ast 
+    LEFT JOIN boranga_associatedspeciestaxonomy ast 
         ON m2m.associatedspeciestaxonomy_id = ast.id
-    INNER JOIN boranga_taxonomy t 
+    LEFT JOIN boranga_taxonomy t 
         ON ast.taxonomy_id = t.id
     GROUP BY assoc.occurrence_id, assoc.comment
 ),
@@ -252,7 +252,7 @@ fire_history AS (
         fh.last_fire_estimate,
         i.name AS intensity
     FROM boranga_occfirehistory fh
-    INNER JOIN boranga_intensity i ON fh.intensity_id = i.id
+    LEFT JOIN boranga_intensity i ON fh.intensity_id = i.id
 ),
 
 tenure AS (
@@ -266,8 +266,8 @@ tenure AS (
             ', ' ORDER BY CASE WHEN t.significant_to_occurrence THEN 'Yes' ELSE 'No' END) AS significances,
         STRING_AGG(DISTINCT t.comments, ', ' ORDER BY t.comments) AS comments
     FROM boranga_occurrencetenure t
-    INNER JOIN boranga_occurrencetenurepurpose p ON t.purpose_id = p.id
-    INNER JOIN boranga_occurrencetenurevesting v ON t.vesting_id = v.id
+    LEFT JOIN boranga_occurrencetenurepurpose p ON t.purpose_id = p.id
+    LEFT JOIN boranga_occurrencetenurevesting v ON t.vesting_id = v.id
     LEFT JOIN boranga_occurrencegeometry g ON t.occurrence_geometry_id = g.id
     GROUP BY g.occurrence_id
 ),
