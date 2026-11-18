@@ -506,8 +506,14 @@ SELECT
     animal_obs.organisation                                 AS SUMM_ORG,
     TO_CHAR(ocr.datetime_created, 'YYYY-MM-DD HH24:MI:SS')  AS ORF_CRE_DA,    
     TO_CHAR(ocr.datetime_updated, 'YYYY-MM-DD HH24:MI:SS')  AS ORF_MOD_DA,
-    (u_mod.first_name || ' ' || u_mod.last_name)            AS ORF_MOD_BY,
-    (u_app.first_name || ' ' || u_app.last_name)            AS APPROVER,
+    COALESCE(
+        NULLIF(concat_ws(' ', NULLIF(u_mod.first_name, ''), NULLIF(u_mod.last_name, '')), ''),
+        u_mod.email
+    )                                                       AS ORF_MOD_BY,
+    COALESCE(
+        NULLIF(concat_ws(' ', NULLIF(u_app.first_name, ''), NULLIF(u_app.last_name, '')), ''),
+        u_app.email
+    )                                                       AS APPROVER,
     TO_CHAR(ocr.datetime_approved, 'YYYY-MM-DD HH24:MI:SS') AS APPROV_DAT,
     ocr.lodgement_date                                      AS LODG_DATE,
 

@@ -545,7 +545,10 @@ SELECT
     END                                                     AS OCC_SOURCE,
     occ.processing_status                                   AS OCC_STATUS,
     TO_CHAR(occ.datetime_updated, 'YYYY-MM-DD HH24:MI:SS')  AS OCC_MOD_DA,
-    (u_mod.first_name || ' ' || u_mod.last_name)            AS OCC_MOD_BY,
+    COALESCE(
+        NULLIF(concat_ws(' ', NULLIF(u_mod.first_name, ''), NULLIF(u_mod.last_name, '')), ''),
+        u_mod.email
+    )                                                       AS OCC_MOD_BY,
     occ.lodgement_date                                      AS LODG_DATE,
     animal_obs.submitter                                    AS SUBMITTER,
     animal_obs.organisation                                 AS SUMM_ORG,
