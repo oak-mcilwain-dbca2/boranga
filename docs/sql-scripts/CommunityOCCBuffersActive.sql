@@ -58,15 +58,18 @@ community AS (
     LEFT JOIN boranga_communitytaxonomy ct ON c.id = ct.community_id
 ),
 
--- -- Approved Conservation Status ------------------------
-approved_cs AS (
+active_cs AS (
     SELECT
         cs.community_id,
         wal.code AS wa_legislative_list_code,
-        concat_ws('; ',
-            NULLIF(walc.code, ''),
-            NULLIF(wapc.code, '')
-        ) AS wa_cons_code,
+        CASE 
+            WHEN cs.processing_status = 'approved' THEN
+                concat_ws('; ',
+                    NULLIF(walc.code, ''),
+                    NULLIF(wapc.code, '')
+                )
+            ELSE NULL 
+        END AS wa_cons_code,
         string_agg(DISTINCT ccl.code, ', ' ORDER BY ccl.code) AS commonwealth_conservation_code
     FROM boranga_conservationstatus cs
     LEFT JOIN boranga_walegislativelist wal 
@@ -79,9 +82,9 @@ approved_cs AS (
         ON cs.id = cs_ccl.conservationstatus_id
     LEFT JOIN boranga_commonwealthconservationlist ccl
         ON cs_ccl.commonwealthconservationlist_id = ccl.id
-    WHERE cs.processing_status = 'approved'
+    WHERE cs.processing_status IN ('approved', 'delisted')
       AND cs.community_id IS NOT NULL
-    GROUP BY cs.community_id, wal.code, walc.code, wapc.code
+    GROUP BY cs.community_id, cs.processing_status, wal.code, walc.code, wapc.code
 ),
 
 -- -- Concatenated site names per OCC -----------------------------------------
@@ -258,9 +261,9 @@ SELECT
     buf.area_ha                                    AS G_AREA_HA,
 
     -- Conservation Status
-    approved_cs.wa_legislative_list_code             AS WA_LEG_CS,
-    approved_cs.wa_cons_code                       AS WACONSCODE,
-    approved_cs.commonwealth_conservation_code       AS COMWLTH_CS,
+    active_cs.wa_legislative_list_code             AS WA_LEG_CS,
+    active_cs.wa_cons_code                       AS WACONSCODE,
+    active_cs.commonwealth_conservation_code       AS COMWLTH_CS,
 
     -- Dates & status
     habitat.obs_date                               AS OBS_DATE,
@@ -333,7 +336,7 @@ INNER JOIN gt            ON occ.group_type_id = gt.id
 INNER JOIN buf           ON occ.id = buf.occurrence_id
 LEFT JOIN boranga_wildstatus ws ON occ.wild_status_id = ws.id
 LEFT JOIN community      ON occ.community_id = community.id
-LEFT JOIN approved_cs    ON occ.community_id = approved_cs.community_id
+LEFT JOIN active_cs    ON occ.community_id = active_cs.community_id
 LEFT JOIN sites_concat   ON occ.id = sites_concat.occurrence_id
 LEFT JOIN loc            ON occ.id = loc.occurrence_id
 LEFT JOIN obs_detail     ON occ.id = obs_detail.occurrence_id
