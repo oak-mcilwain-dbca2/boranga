@@ -68,39 +68,33 @@ species AS (
     GROUP BY s.id, t.scientific_name, t.taxon_name_id
 ),
 
--- -- Active Conservation Status (approved + delisted) ------------------------
--- Business rule: one active CS per species at a time.
--- Note: commonwealth_conservation_categories is now a M2M relationship
 active_cs AS (
     SELECT
         cs.species_id,
-        wal.code  AS wa_legislative_list_code,
-        string_agg(DISTINCT ccl.code, ', ' ORDER BY ccl.code) AS commonwealth_conservation_code,
-        cs.processing_status AS cs_status
+        wal.code AS wa_legislative_list_code,
+        CASE 
+            WHEN cs.processing_status = 'approved' THEN
+                concat_ws('; ',
+                    NULLIF(walc.code, ''),
+                    NULLIF(wapc.code, '')
+                )
+            ELSE NULL 
+        END AS wa_cons_code,
+        string_agg(DISTINCT ccl.code, ', ' ORDER BY ccl.code) AS commonwealth_conservation_code
     FROM boranga_conservationstatus cs
-    LEFT JOIN boranga_walegislativelist wal ON cs.wa_legislative_list_id = wal.id
+    LEFT JOIN boranga_walegislativelist wal 
+        ON cs.wa_legislative_list_id = wal.id
+    LEFT JOIN boranga_walegislativecategory walc 
+        ON cs.wa_legislative_category_id = walc.id
+    LEFT JOIN boranga_waprioritycategory wapc 
+        ON cs.wa_priority_category_id = wapc.id
     LEFT JOIN boranga_conservationstatus_commonwealth_conservation_categories cs_ccl
         ON cs.id = cs_ccl.conservationstatus_id
     LEFT JOIN boranga_commonwealthconservationlist ccl
         ON cs_ccl.commonwealthconservationlist_id = ccl.id
     WHERE cs.processing_status IN ('approved', 'delisted')
       AND cs.species_id IS NOT NULL
-    GROUP BY cs.species_id, wal.code, cs.processing_status
-),
-
--- -- Approved-only Conservation Status (exclude delisted) --------------------
-approved_cs AS (
-    SELECT
-        cs.species_id,
-        concat_ws('; ',
-            NULLIF(walc.code, ''),
-            NULLIF(wapc.code, '')
-        ) AS wa_cons_code
-    FROM boranga_conservationstatus cs
-    LEFT JOIN boranga_walegislativecategory walc ON cs.wa_legislative_category_id = walc.id
-    LEFT JOIN boranga_waprioritycategory wapc ON cs.wa_priority_category_id = wapc.id
-    WHERE cs.processing_status = 'approved'
-      AND cs.species_id IS NOT NULL
+    GROUP BY cs.species_id, cs.processing_status, wal.code, walc.code, wapc.code
 ),
 
 -- -- OCR Location ------------------------------------------------------------
@@ -130,7 +124,7 @@ observer AS (
         obs_role.item as role,
         od.contact        
     FROM boranga_ocrobserverdetail od
-    INNER JOIN boranga_observerrole obs_role ON obs_role.id = od.role_id
+    LEFT JOIN boranga_observerrole obs_role ON obs_role.id = od.role_id
     WHERE od.main_observer = TRUE
       AND od.visible = TRUE
 ),
@@ -184,9 +178,8 @@ plant_count AS (
         si.organisation
     FROM boranga_ocrplantcount pc
     
-    INNER JOIN boranga_occurrencereport ocr ON pc.occurrence_report_id = ocr.id
-    INNER JOIN boranga_submitterinformation si ON ocr.submitter_information_id = si.id
-
+    LEFT JOIN boranga_occurrencereport ocr ON pc.occurrence_report_id = ocr.id
+    LEFT JOIN boranga_submitterinformation si ON ocr.submitter_information_id = si.id
     LEFT JOIN boranga_plantcountmethod pcm ON pc.plant_count_method_id = pcm.id
     LEFT JOIN boranga_countedsubject csb ON pc.counted_subject_id = csb.id
     LEFT JOIN boranga_plantcondition pcond ON pc.plant_condition_id = pcond.id
@@ -271,15 +264,15 @@ associated_species AS (
     SELECT
         assoc.occurrence_report_id,
         STRING_AGG(t.scientific_name, ', ' ORDER BY t.scientific_name) AS scientific_names,
-        assoc.comment
+        STRING_AGG(assoc.comment, '; ' ORDER BY assoc.comment) AS comment
     FROM boranga_ocrassociatedspecies assoc
-    INNER JOIN boranga_ocrassociatedspecies_related_species m2m 
+    LEFT JOIN boranga_ocrassociatedspecies_related_species m2m 
         ON assoc.id = m2m.ocrassociatedspecies_id
-    INNER JOIN boranga_associatedspeciestaxonomy ast 
+    LEFT JOIN boranga_associatedspeciestaxonomy ast 
         ON m2m.associatedspeciestaxonomy_id = ast.id
-    INNER JOIN boranga_taxonomy t 
+    LEFT JOIN boranga_taxonomy t 
         ON ast.taxonomy_id = t.id
-    GROUP BY assoc.occurrence_report_id, assoc.comment
+    GROUP BY assoc.occurrence_report_id
 ),
 
 fire_history AS (
@@ -288,7 +281,7 @@ fire_history AS (
         fh.last_fire_estimate,
         i.name AS intensity
     FROM boranga_ocrfirehistory fh
-    INNER JOIN boranga_intensity i ON fh.intensity_id = i.id
+    LEFT JOIN boranga_intensity i ON fh.intensity_id = i.id
 ),
 -- -- Geometry (Polygons only) ------------------------------------------------
 geom AS (
@@ -306,6 +299,7 @@ geom AS (
     FROM boranga_occurrencereportgeometry g
     WHERE ST_GeometryType(g.geometry) IN ('ST_Polygon', 'ST_MultiPolygon')
       AND g.visible = TRUE
+      AND g.geometry IS NOT NULL
 )
 
 -- ===========================================================================
@@ -334,7 +328,7 @@ SELECT
 
     -- Conservation Status
     active_cs.wa_legislative_list_code             AS WA_LEG_CS,
-    approved_cs.wa_cons_code                       AS WACONSCODE,
+    active_cs.wa_cons_code                         AS WACONSCODE,
     active_cs.commonwealth_conservation_code       AS COMWLTH_CS,
 
     -- Observer
@@ -453,7 +447,6 @@ INNER JOIN geom     ON ocr.id = geom.occurrence_report_id
 LEFT JOIN occ       ON ocr.occurrence_id = occ.id
 LEFT JOIN species   ON ocr.species_id = species.id
 LEFT JOIN active_cs ON species.id = active_cs.species_id
-LEFT JOIN approved_cs ON species.id = approved_cs.species_id
 LEFT JOIN loc       ON ocr.id = loc.occurrence_report_id
 LEFT JOIN observer  ON ocr.id = observer.occurrence_report_id
 LEFT JOIN obs_detail ON ocr.id = obs_detail.occurrence_report_id
