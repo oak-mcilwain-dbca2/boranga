@@ -166,15 +166,30 @@ identification AS (
 habitat_composition AS (
     SELECT
         hc.occurrence_report_id,
-        hc.land_form,
         rt.name AS rock_type,
         hc.loose_rock_percent,
-        hc.soil_type,
         sc.name AS soil_colour,
         scond.name AS soil_condition,
         dr.name AS drainage,
         hc.water_quality,
-        hc.habitat_notes
+        hc.habitat_notes,
+
+        -- MultiSelectField: land_form (comma-separated IDs -> names)
+        (
+            SELECT string_agg(lf.name, '; ' ORDER BY lf.name)
+            FROM unnest(string_to_array(hc.land_form, ',')) AS val(id_str)
+            INNER JOIN boranga_landform lf
+                ON lf.id = NULLIF(trim(val.id_str), '')::integer
+        ) AS land_form,
+
+        -- MultiSelectField: soil_type (comma-separated IDs -> names)
+        (
+            SELECT string_agg(st.name, '; ' ORDER BY st.name)
+            FROM unnest(string_to_array(hc.soil_type, ',')) AS val(id_str)
+            INNER JOIN boranga_soiltype st
+                ON st.id = NULLIF(trim(val.id_str), '')::integer
+        ) AS soil_type
+
     FROM boranga_ocrhabitatcomposition hc
     LEFT JOIN boranga_rocktype rt ON hc.rock_type_id = rt.id
     LEFT JOIN boranga_soilcolour sc ON hc.soil_colour_id = sc.id
