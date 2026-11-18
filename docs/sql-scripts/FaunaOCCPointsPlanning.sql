@@ -49,35 +49,33 @@ species AS (
     GROUP BY s.id, fg.name
 ),
 
--- -- Active Conservation Status (approved + delisted) -----------------------
 active_cs AS (
     SELECT
         cs.species_id,
         wal.code AS wa_legislative_list_code,
-        string_agg(DISTINCT ccl.code, ', ' ORDER BY ccl.code) AS commonwealth_conservation_code,
-        cs.processing_status AS cs_status
+        CASE 
+            WHEN cs.processing_status = 'approved' THEN
+                concat_ws('; ',
+                    NULLIF(walc.code, ''),
+                    NULLIF(wapc.code, '')
+                )
+            ELSE NULL 
+        END AS wa_cons_code,
+        string_agg(DISTINCT ccl.code, ', ' ORDER BY ccl.code) AS commonwealth_conservation_code
     FROM boranga_conservationstatus cs
-    LEFT JOIN boranga_walegislativelist wal ON cs.wa_legislative_list_id = wal.id
-    LEFT JOIN boranga_conservationstatus_commonwealth_conservation_categories cs_ccl ON cs.id = cs_ccl.conservationstatus_id
-    LEFT JOIN boranga_commonwealthconservationlist ccl ON cs_ccl.commonwealthconservationlist_id = ccl.id
+    LEFT JOIN boranga_walegislativelist wal 
+        ON cs.wa_legislative_list_id = wal.id
+    LEFT JOIN boranga_walegislativecategory walc 
+        ON cs.wa_legislative_category_id = walc.id
+    LEFT JOIN boranga_waprioritycategory wapc 
+        ON cs.wa_priority_category_id = wapc.id
+    LEFT JOIN boranga_conservationstatus_commonwealth_conservation_categories cs_ccl
+        ON cs.id = cs_ccl.conservationstatus_id
+    LEFT JOIN boranga_commonwealthconservationlist ccl
+        ON cs_ccl.commonwealthconservationlist_id = ccl.id
     WHERE cs.processing_status IN ('approved', 'delisted')
-    AND cs.species_id IS NOT NULL
-    GROUP BY cs.species_id, wal.code, cs.processing_status
-),
-
--- -- Approved-only Conservation Status (exclude delisted) -------------------
-approved_cs AS (
-    SELECT
-        cs.species_id,
-        concat_ws('; ',
-            NULLIF(walc.code, ''),
-            NULLIF(wapc.code, '')
-        ) AS wa_cons_code
-    FROM boranga_conservationstatus cs
-    LEFT JOIN boranga_walegislativecategory walc ON cs.wa_legislative_category_id = walc.id
-    LEFT JOIN boranga_waprioritycategory wapc ON cs.wa_priority_category_id = wapc.id
-    WHERE cs.processing_status = 'approved'
-    AND cs.species_id IS NOT NULL
+      AND cs.species_id IS NOT NULL
+    GROUP BY cs.species_id, cs.processing_status, wal.code, walc.code, wapc.code
 ),
 
 -- -- Animal Observation (Fauna-specific) -------------------------------------
@@ -128,6 +126,7 @@ geom AS (
     FROM boranga_occurrencegeometry g
     WHERE ST_GeometryType(g.geometry) IN ('ST_Point')
     AND g.visible = TRUE
+    AND g.geometry IS NOT NULL
 )
 
 -- =============================================================================
@@ -149,7 +148,7 @@ SELECT
     
     -- Legislative tracking
     active_cs.wa_legislative_list_code AS WA_LEG_CS,
-    approved_cs.wa_cons_code AS WACONSCODE,
+    active_cs.wa_cons_code AS WACONSCODE,
     active_cs.commonwealth_conservation_code AS COMWLTH_CS,
     
     -- Administrative metadata
@@ -163,8 +162,8 @@ SELECT
         WHEN occ.occurrence_source IS NULL OR occ.occurrence_source = '' THEN NULL
         WHEN occ.occurrence_source = 'ocr' THEN 'ORF'
         WHEN occ.occurrence_source = 'non-ocr' THEN 'No ORF'
-        WHEN occ.occurrence_source = 'ocr,non-ocr' THEN 'ORF; No ORF'
-        ELSE NULL
+        WHEN occ.occurrence_source IN ('ocr,non-ocr', 'non-ocr,ocr') THEN 'ORF; No ORF'
+        ELSE occ.occurrence_source
     END AS OCC_SOURCE,
 
     gt.name AS GROUP_TYPE
@@ -173,7 +172,6 @@ INNER JOIN gt ON occ.group_type_id = gt.id
 INNER JOIN geom ON occ.id = geom.occurrence_id
 LEFT JOIN species ON occ.species_id = species.id
 LEFT JOIN active_cs ON species.id = active_cs.species_id
-LEFT JOIN approved_cs ON species.id = approved_cs.species_id
 LEFT JOIN animal_obs ON occ.id = animal_obs.occurrence_id
 LEFT JOIN loc ON occ.id = loc.occurrence_id
 LEFT JOIN identification ON occ.id = identification.occurrence_id
